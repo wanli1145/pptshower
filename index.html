@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <title>pptshower</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main id="app">
+    <section id="unlock-view" class="screen unlock-screen" hidden>
+      <form id="unlock-form" class="card unlock-card" autocomplete="off">
+        <h1 class="brand">pptshower</h1>
+        <p id="unlock-message" class="muted">输入总口令以查看课件。</p>
+        <label class="field">
+          <span>总口令</span>
+          <input id="passphrase" type="password" autocomplete="current-password" required>
+        </label>
+        <p id="unlock-error" class="error" role="alert" hidden></p>
+        <button type="submit" class="button primary block" id="unlock-button">解锁</button>
+        <a class="subtle" href="admin/">管理台</a>
+      </form>
+      <p id="uninitialized-note" class="muted small" hidden>
+        站点尚未初始化。请先到 <a href="admin/">管理台</a> 设置总口令并上传第一套课件。
+      </p>
+    </section>
+
+    <section id="list-view" class="screen list-screen" hidden>
+      <header class="list-header">
+        <div>
+          <h1 class="brand">pptshower</h1>
+          <p id="list-subtitle" class="muted">已解锁的课件</p>
+        </div>
+        <button id="lock-button" class="button ghost" type="button">锁定</button>
+      </header>
+      <div id="deck-list" class="deck-list"></div>
+      <p id="empty-list" class="muted empty" hidden>
+        还没有课件。去 <a href="admin/">管理台</a> 添加第一套。
+      </p>
+    </section>
+
+    <section id="viewer-view" class="viewer" hidden>
+      <div id="viewer-stage" class="viewer-stage">
+        <div id="page-wrap" class="page-wrap">
+          <canvas id="page-canvas"></canvas>
+          <div id="annotation-overlay" class="annotation-overlay"></div>
+        </div>
+
+        <div id="viewer-loading" class="viewer-loading" hidden>正在解密课件…</div>
+        <p id="viewer-error" class="viewer-error" role="alert" hidden></p>
+
+        <div class="viewer-top controls-zone">
+          <button id="back-button" class="button ghost" type="button">← 列表</button>
+          <span id="viewer-title" class="viewer-title"></span>
+        </div>
+
+        <div class="controls controls-zone">
+          <button id="prev-button" class="button icon" type="button" title="上一页 (←)">‹</button>
+          <div class="page-status">
+            <input id="page-input" type="number" min="1" value="1" inputmode="numeric" aria-label="页码">
+            <span id="page-total" class="muted">/ 0</span>
+          </div>
+          <button id="next-button" class="button icon" type="button" title="下一页 (→)">›</button>
+          <span class="controls-sep" aria-hidden="true"></span>
+          <button id="overview-button" class="button ghost" type="button" title="缩略图总览 (G)">总览</button>
+          <button id="fullscreen-button" class="button ghost" type="button" title="全屏 (F)">全屏</button>
+        </div>
+      </div>
+
+      <div id="overview" class="overview" hidden>
+        <div class="overview-header">
+          <span>幻灯片总览</span>
+          <button id="overview-close" class="button ghost" type="button">关闭 (Esc)</button>
+        </div>
+        <div id="thumb-grid" class="thumb-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="assets/app.js"></script>
+</body>
+</html>

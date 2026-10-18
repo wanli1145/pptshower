@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://objects.githubusercontent.com http://localhost:8787 http://127.0.0.1:8787; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <title>管理台 · pptshower</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <main class="admin">
+    <header class="admin-header">
+      <div>
+        <h1 class="brand">管理台</h1>
+        <p class="muted">上传、修改和删除课件，仓库中的文件始终是加密的。</p>
+      </div>
+      <div class="row">
+        <a class="button ghost" href="../">返回站点</a>
+        <button id="disconnect-button" class="button ghost" type="button" hidden>断开连接</button>
+      </div>
+    </header>
+
+    <div id="status" class="status" role="status" hidden></div>
+
+    <section id="token-card" class="card admin-card" hidden>
+      <h2>连接仓库</h2>
+      <p class="help">
+        管理台需要一次性获得对 <code>wanli1145/pptshower</code> 仓库的写入权限。
+        令牌只保存在本浏览器的 localStorage 中，不会上传到其他地方。
+      </p>
+      <form id="token-form" class="row" autocomplete="off">
+        <input id="token-input" type="password" placeholder="github_pat_…" autocomplete="off" required>
+        <button id="token-button" class="button primary" type="submit">保存并连接</button>
+      </form>
+      <details class="help">
+        <summary>如何创建令牌</summary>
+        <ol>
+          <li>打开 GitHub 的 <strong>Settings → Developer settings → Personal access tokens → Fine-grained tokens</strong>。</li>
+          <li>把 <strong>Repository access</strong> 设为仅 <code>wanli1145/pptshower</code>。</li>
+          <li>在 <strong>Repository permissions</strong> 中把 <strong>Contents</strong> 设为 <strong>Read and write</strong>，<strong>Metadata</strong> 保持只读。</li>
+          <li>生成后把令牌粘贴到上面的输入框。令牌只会被本页面用于读写这个仓库。</li>
+        </ol>
+      </details>
+    </section>
+
+    <section id="auth-card" class="card admin-card" hidden>
+      <h2>输入总口令</h2>
+      <p class="help">总口令只在当前页面内存中用于加密和解密课件索引，刷新页面后需要重新输入。</p>
+      <form id="auth-form" class="row" autocomplete="off">
+        <input id="admin-passphrase" type="password" placeholder="总口令" autocomplete="current-password" required>
+        <button id="auth-button" class="button primary" type="submit">解锁管理</button>
+      </form>
+    </section>
+
+    <section id="init-card" class="card admin-card" hidden>
+      <h2>初始化站点</h2>
+      <p class="help">
+        仓库已连接，但站点还没有总口令。请设置一个至少 12 个字符的总口令。
+        <strong>口令不会保存在任何地方，忘记后将无法解密任何课件。</strong>
+      </p>
+      <form id="init-form" class="add-form" autocomplete="off">
+        <label class="field">
+          <span>总口令（至少 12 个字符）</span>
+          <input id="init-passphrase" type="password" autocomplete="new-password" required>
+        </label>
+        <label class="field">
+          <span>再次输入总口令</span>
+          <input id="init-confirm" type="password" autocomplete="new-password" required>
+        </label>
+        <p id="init-error" class="error" role="alert" hidden></p>
+        <div class="row">
+          <button id="init-button" class="button primary" type="submit">初始化站点</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="manage-card" class="card admin-card" hidden>
+      <h2>课件管理</h2>
+
+      <form id="add-form" class="add-form" autocomplete="off">
+        <h3>添加课件</h3>
+        <label class="field">
+          <span>标题</span>
+          <input id="add-title" type="text" maxlength="200" required>
+        </label>
+        <label class="field">
+          <span>日期</span>
+          <input id="add-date" type="date">
+        </label>
+        <label class="field">
+          <span>PDF 文件</span>
+          <input id="add-file" type="file" accept="application/pdf,.pdf" required>
+        </label>
+        <div class="row">
+          <button id="add-button" class="button primary" type="submit">加密并上传</button>
+        </div>
+        <p class="help small">建议先在 PowerPoint 中把每个动画步骤拆成独立幻灯片，再导出为 PDF。单个文件不超过 50 MB。</p>
+      </form>
+
+      <div id="admin-deck-list" class="deck-table"></div>
+      <p id="admin-empty" class="muted" hidden>还没有课件。</p>
+    </section>
+
+    <p class="help small admin-footnote">
+      每次操作都会生成一次提交。提交信息只包含课件 ID，不包含标题或内容。
+    </p>
+  </main>
+
+  <dialog id="edit-dialog">
+    <form id="edit-form">
+      <h2>编辑课件</h2>
+      <label>
+        标题
+        <input id="edit-title" type="text" maxlength="200" required>
+      </label>
+      <label>
+        日期
+        <input id="edit-date" type="date">
+      </label>
+      <div class="row">
+        <button id="edit-cancel" class="button ghost" type="button">取消</button>
+        <button id="edit-save" class="button primary" type="submit">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <input id="replace-file" type="file" accept="application/pdf,.pdf" hidden>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

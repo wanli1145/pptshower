@@ -1,0 +1,58 @@
+.admin-header {
+  align-items: flex-start;
+}
+
+.admin-header .row {
+  flex-wrap: nowrap;
+}
+
+.admin-footnote {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.admin-card.busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.deck-row .actions .button {
+  padding: 7px 11px;
+  font-size: 13px;
+}
+
+#add-file,
+#replace-file {
+  background: var(--panel-2);
+}
+
+dialog h2 {
+  font-size: 18px;
+}
+
+dialog label {
+  color: var(--muted);
+}
+
+dialog .row {
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+#status {
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .admin-header .row {
+    flex-wrap: wrap;
+  }
+
+  .deck-row {
+    align-items: flex-start;
+  }
+
+  .deck-row .actions {
+    justify-content: flex-start;
+  }
+}
