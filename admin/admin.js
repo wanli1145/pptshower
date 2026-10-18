@@ -120,7 +120,11 @@ function setBusy(busy) {
 function friendly(error) {
   const status = error && error.status;
   if (status === 401) return '令牌无效或已过期，请重新输入。';
-  if (status === 403) return '令牌权限不足，或触发了 GitHub 的频率限制。';
+  if (status === 403) {
+    const detail =
+      error.message && !/^403\b/.test(error.message) ? `（GitHub：${error.message}）` : '';
+    return `令牌权限不足，或触发了 GitHub 的频率限制。请确认令牌的 Contents 权限是 Read and write。${detail}`;
+  }
   if (status === 404) return '无法访问仓库，请确认令牌已授权 wanli1145/pptshower。';
   if (status === 409 || status === 422) return '仓库在操作期间发生了变化，请重试。';
   const message = error && error.message ? error.message : '未知错误';
