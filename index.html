@@ -10,35 +10,62 @@
 </head>
 <body>
   <main id="app">
-    <section id="unlock-view" class="screen unlock-screen" hidden>
-      <form id="unlock-form" class="card unlock-card" autocomplete="off">
-        <h1 class="brand">pptshower</h1>
-        <p id="unlock-message" class="muted">输入总口令以查看课件。</p>
-        <label class="field">
-          <span>总口令</span>
-          <input id="passphrase" type="password" autocomplete="current-password" required>
-        </label>
-        <p id="unlock-error" class="error" role="alert" hidden></p>
-        <button type="submit" class="button primary block" id="unlock-button">解锁</button>
-        <a class="subtle" href="admin/">管理台</a>
-      </form>
-      <p id="uninitialized-note" class="muted small" hidden>
-        站点尚未初始化。请先到 <a href="admin/">管理台</a> 设置总口令并上传第一套课件。
-      </p>
+    <section id="unlock-view" class="unlock-screen" hidden>
+      <div class="welcome-panel">
+        <a class="wordmark" href="./" aria-label="pptshower 首页"><span class="brand-mark" aria-hidden="true"></span>pptshower<span class="brand-dot">.</span></a>
+        <div class="welcome-copy">
+          <p class="eyebrow">YOUR CLASSROOM, READY.</p>
+          <h1>让每一页，<br>清晰呈现。</h1>
+          <p class="welcome-description">课件准备妥当，课堂从容开始。<br>打开浏览器，把注意力留给讲述。</p>
+        </div>
+        <div class="slide-art" aria-hidden="true">
+          <div class="art-back"></div>
+          <div class="art-slide"><div class="art-top"><span>pptshower / CLASSROOM</span><span>01</span></div><div class="art-heading">好的讲述<br>从这一页开始。</div><div class="art-bottom"><span class="art-line"></span><span>READY TO PRESENT ↗</span></div><div class="art-orbit"></div></div>
+          <div class="art-pagination"><span></span><span></span><span></span><span></span></div>
+        </div>
+        <div class="welcome-footer"><span>为专注的课堂而设计</span><span>简单 · 私密 · 随时展示</span></div>
+      </div>
+      <div class="unlock-side">
+        <a class="top-link" href="admin/">管理课件 <span aria-hidden="true">↗</span></a>
+        <div class="unlock-content">
+          <span class="section-symbol" aria-hidden="true">↗</span>
+          <p class="eyebrow">WELCOME BACK</p>
+          <h2>进入你的课件库</h2>
+          <p id="unlock-message" class="muted">输入总口令，开启今天的课堂。</p>
+          <form id="unlock-form" autocomplete="off">
+            <label class="field" for="passphrase">总口令</label>
+            <div class="password-field"><input id="passphrase" name="passphrase" type="password" autocomplete="current-password" placeholder="输入总口令…" aria-describedby="unlock-error" required><button id="toggle-passphrase" class="password-toggle" type="button" aria-label="显示总口令" aria-pressed="false">显示</button></div>
+            <p id="unlock-error" class="error" role="alert" hidden></p>
+            <button type="submit" class="button primary block" id="unlock-button">解锁课件库</button>
+          </form>
+          <p id="uninitialized-note" class="setup-note" hidden>第一次使用？前往 <a href="admin/">管理台初始化站点 →</a></p>
+          <div class="privacy-note"><span aria-hidden="true">◇</span><p>课件仅在当前浏览器中解密。<br>刷新页面后，需要重新输入总口令。</p></div>
+        </div>
+        <div class="unlock-footer">你的课件，安心存放。</div>
+      </div>
     </section>
 
-    <section id="list-view" class="screen list-screen" hidden>
-      <header class="list-header">
-        <div>
-          <h1 class="brand">pptshower</h1>
-          <p id="list-subtitle" class="muted">已解锁的课件</p>
+    <section id="list-view" class="library-shell" hidden>
+      <aside class="sidebar">
+        <a class="wordmark" href="./"><span class="brand-mark" aria-hidden="true"></span>pptshower<span class="brand-dot">.</span></a>
+        <p class="nav-caption">工作空间</p>
+        <nav aria-label="主导航"><a class="nav-item active" href="#/" aria-current="page"><span aria-hidden="true">▦</span>全部课件<span id="nav-count" class="nav-count">0</span></a><a class="nav-item" href="admin/"><span aria-hidden="true">＋</span>管理课件<span class="nav-arrow" aria-hidden="true">↗</span></a></nav>
+        <div class="sidebar-bottom"><div class="session-status"><span></span>课件库已解锁</div><button id="lock-button" class="button sidebar-lock" type="button">锁定课件库 <span aria-hidden="true">↗</span></button></div>
+      </aside>
+      <div class="library-main">
+        <header class="workspace-bar"><span>工作空间 <span class="breadcrumb-sep">/</span> <strong>课件库</strong></span><span class="workspace-tag">课堂展示</span></header>
+        <div class="library-content">
+          <div class="page-heading"><div><p class="eyebrow">YOUR COLLECTION</p><h1>全部课件<span class="heading-dot">.</span></h1><p id="list-subtitle" class="muted" aria-live="polite">已解锁的课件</p></div><a class="button primary" href="admin/">＋ 添加课件</a></div>
+          <div class="library-toolbar">
+            <label class="search-field"><span aria-hidden="true">⌕</span><input id="deck-search" type="search" placeholder="搜索课件标题…" aria-label="搜索课件标题"></label>
+            <div class="toolbar-options"><select id="deck-sort" aria-label="课件排序"><option value="newest">日期：由新到旧</option><option value="oldest">日期：由旧到新</option><option value="title">标题：A → Z</option></select><div class="view-switch" aria-label="课件视图"><button id="grid-view" type="button" aria-label="网格视图" aria-pressed="true">▦</button><button id="rows-view" type="button" aria-label="列表视图" aria-pressed="false">☷</button></div></div>
+          </div>
+          <div id="deck-list" class="deck-list"></div>
+          <div id="empty-list" class="empty-state" hidden><span class="empty-icon" aria-hidden="true">▤</span><h2>第一堂课，从这里开始</h2><p>添加一套课件，让下一次展示准备就绪。</p><a class="button primary" href="admin/">＋ 添加第一套课件</a></div>
+          <div id="no-results" class="empty-state" hidden><span class="empty-icon" aria-hidden="true">⌕</span><h2>没有找到相关课件</h2><p>换个关键词，或查看全部课件。</p><button id="clear-search" class="button ghost" type="button">清除搜索</button></div>
+          <footer class="library-footer"><span>选择课件，即可开始展示</span><span><kbd>←</kbd> <kbd>→</kbd> 翻页 <span class="footer-divider">·</span> <kbd>F</kbd> 全屏 <span class="footer-divider">·</span> <kbd>G</kbd> 总览</span></footer>
         </div>
-        <button id="lock-button" class="button ghost" type="button">锁定</button>
-      </header>
-      <div id="deck-list" class="deck-list"></div>
-      <p id="empty-list" class="muted empty" hidden>
-        还没有课件。去 <a href="admin/">管理台</a> 添加第一套。
-      </p>
+      </div>
     </section>
 
     <section id="viewer-view" class="viewer" hidden>
@@ -48,7 +75,7 @@
           <div id="annotation-overlay" class="annotation-overlay"></div>
         </div>
 
-        <div id="viewer-loading" class="viewer-loading" hidden>正在解密课件…</div>
+        <div id="viewer-loading" class="viewer-loading" role="status" hidden>正在解密课件…</div>
         <p id="viewer-error" class="viewer-error" role="alert" hidden></p>
 
         <div class="viewer-top controls-zone">
@@ -57,21 +84,21 @@
         </div>
 
         <div class="controls controls-zone">
-          <button id="prev-button" class="button icon" type="button" title="上一页 (←)">‹</button>
+          <button aria-label="上一页" id="prev-button" class="button icon" type="button" title="上一页 (←)">‹</button>
           <div class="page-status">
             <input id="page-input" type="number" min="1" value="1" inputmode="numeric" aria-label="页码">
             <span id="page-total" class="muted">/ 0</span>
           </div>
-          <button id="next-button" class="button icon" type="button" title="下一页 (→)">›</button>
+          <button aria-label="下一页" id="next-button" class="button icon" type="button" title="下一页 (→)">›</button>
           <span class="controls-sep" aria-hidden="true"></span>
           <button id="overview-button" class="button ghost" type="button" title="缩略图总览 (G)">总览</button>
           <button id="fullscreen-button" class="button ghost" type="button" title="全屏 (F)">全屏</button>
         </div>
       </div>
 
-      <div id="overview" class="overview" hidden>
+      <div id="overview" class="overview" role="dialog" aria-modal="true" aria-label="幻灯片总览" hidden>
         <div class="overview-header">
-          <span>幻灯片总览</span>
+          <span>幻灯片总览 <span class="muted">/ 选择一页继续展示</span></span>
           <button id="overview-close" class="button ghost" type="button">关闭 (Esc)</button>
         </div>
         <div id="thumb-grid" class="thumb-grid"></div>
@@ -79,6 +106,7 @@
     </section>
   </main>
 
+  <noscript><p class="setup-note">请启用 JavaScript，以解密和展示课件。</p></noscript>
   <script type="module" src="assets/app.js"></script>
 </body>
 </html>

@@ -10,124 +10,51 @@
   <link rel="stylesheet" href="admin.css">
 </head>
 <body>
-  <main class="admin">
-    <header class="admin-header">
-      <div>
-        <h1 class="brand">管理台</h1>
-        <p class="muted">上传、修改和删除课件，仓库中的文件始终是加密的。</p>
+  <div class="library-shell">
+    <aside class="sidebar">
+      <a class="wordmark" href="../"><span class="brand-mark" aria-hidden="true"></span>pptshower<span class="brand-dot">.</span></a>
+      <p class="nav-caption">工作空间</p>
+      <nav aria-label="主导航"><a class="nav-item" href="../"><span aria-hidden="true">▦</span>全部课件</a><a class="nav-item active" href="./" aria-current="page"><span aria-hidden="true">＋</span>管理课件</a></nav>
+      <div class="sidebar-bottom"><p class="sidebar-tip">课前准备妥当，<br>课堂自有从容。</p><a class="button sidebar-lock" href="../">返回课件库 <span aria-hidden="true">↗</span></a></div>
+    </aside>
+    <main class="library-main">
+      <header class="workspace-bar"><span>工作空间 <span class="breadcrumb-sep">/</span> <strong>管理台</strong></span><button id="disconnect-button" class="button ghost" type="button" hidden>断开连接</button></header>
+      <div class="library-content admin-content">
+        <div class="page-heading"><div><p class="eyebrow">BEHIND EVERY GREAT CLASS</p><h1>课件管理<span class="heading-dot">.</span></h1><p class="muted">整理好每一份课件，为下一次分享做好准备。</p></div><span class="admin-badge">私密课件空间</span></div>
+        <ol class="setup-steps" aria-label="管理台使用步骤"><li id="step-connect" class="current" aria-current="step"><span>01</span><div><strong>连接仓库</strong><small>授权存储空间</small></div></li><li id="step-unlock"><span>02</span><div><strong>解锁管理</strong><small>验证总口令</small></div></li><li id="step-manage"><span>03</span><div><strong>管理课件</strong><small>上传与整理</small></div></li></ol>
+        <div id="status" class="status" role="status" aria-live="polite" hidden></div>
+        <section id="token-card" class="card admin-card connection-card" hidden>
+          <div class="connection-form"><span class="section-symbol" aria-hidden="true">↗</span><h2>连接你的课件仓库</h2><p class="help">使用 GitHub 令牌，连接 <code>wanli1145/pptshower</code>，开始上传和整理课件。</p>
+            <form id="token-form" autocomplete="off"><label class="field" for="token-input">GitHub 个人访问令牌</label><input id="token-input" type="password" name="github-token" placeholder="github_pat_…" autocomplete="off" spellcheck="false" required><button id="token-button" class="button primary block" type="submit">连接仓库 →</button></form>
+            <p class="help small storage-note">令牌保存在当前浏览器中，供下次连接使用。点击「断开连接」即可清除。</p>
+          </div>
+          <aside class="connection-guide"><p class="eyebrow">GETTING STARTED</p><h3>第一次连接？</h3><p class="help">在 GitHub 创建仅用于此仓库的令牌。</p><ol><li><span>1</span><p>进入 Settings → Developer settings → Personal access tokens → Fine-grained tokens。</p></li><li><span>2</span><p>Repository access 仅选择 <strong>wanli1145/pptshower</strong>。</p></li><li><span>3</span><p>Contents 设为 <strong>Read and write</strong>，Metadata 保持只读。</p></li><li><span>4</span><p>复制令牌，粘贴到左侧并连接。</p></li></ol><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" class="guide-link">前往 GitHub 创建令牌 ↗</a></aside>
+        </section>
+        <section id="auth-card" class="card admin-card narrow-card" hidden>
+          <span class="section-symbol" aria-hidden="true">◇</span><p class="eyebrow">ONE MORE STEP</p><h2>解锁课件管理</h2><p class="help">仓库已连接。输入总口令，继续管理你的课件。</p>
+          <form id="auth-form" class="stack-form" autocomplete="off"><label class="field" for="admin-passphrase">总口令</label><input id="admin-passphrase" name="passphrase" type="password" placeholder="输入总口令…" autocomplete="current-password" required><button id="auth-button" class="button primary" type="submit">解锁管理 →</button></form><p class="help small">总口令仅用于当前页面的加密与解密，刷新后需要重新输入。</p>
+        </section>
+        <section id="init-card" class="card admin-card narrow-card" hidden>
+          <p class="eyebrow">MAKE IT YOURS</p><h2>创建你的课件空间</h2><p class="help">设置一个至少 12 个字符的总口令。今后展示和管理课件，都使用这个口令。</p>
+          <form id="init-form" class="stack-form" autocomplete="off"><label class="field">总口令<input id="init-passphrase" name="new-passphrase" type="password" placeholder="至少 12 个字符…" minlength="12" autocomplete="new-password" required></label><label class="field">再次输入总口令<input id="init-confirm" name="confirm-passphrase" type="password" placeholder="再次输入以确认…" minlength="12" autocomplete="new-password" required></label><p id="init-error" class="error" role="alert" hidden></p><p class="setup-note">请妥善保存总口令。忘记后，将无法解密已有课件。</p><button id="init-button" class="button primary" type="submit">创建课件空间 →</button></form>
+        </section>
+        <section id="manage-card" class="manage-grid" aria-label="课件管理" hidden>
+          <form id="add-form" class="card upload-card">
+            <div><p class="eyebrow">ADD TO COLLECTION</p><h2>添加课件</h2><p class="help">上传 PDF，即可在课堂中逐页展示。</p></div>
+            <label class="field">课件标题<input id="add-title" type="text" maxlength="200" placeholder="为这次分享起个名字…" required></label>
+            <label class="field">课件日期<input id="add-date" type="date"></label>
+            <label id="upload-zone" class="upload-zone"><span class="upload-symbol" aria-hidden="true">↑</span><strong id="file-name">选择 PDF，或拖放到这里</strong><span class="help small">PDF 格式 · 最大 50 MB</span><input id="add-file" type="file" aria-label="选择 PDF 文件" accept="application/pdf,.pdf" required></label>
+            <button id="add-button" class="button primary block" type="submit">＋ 加密并上传</button><p class="help small">使用 PowerPoint？先将课件导出为 PDF；动画步骤可拆成独立幻灯片。</p>
+          </form>
+          <div class="card inventory-card"><div class="inventory-heading"><h2>已上传课件</h2><span id="admin-count" class="count-label">0 套课件</span></div><div id="admin-deck-list" class="deck-table"></div><div id="admin-empty" class="admin-empty" hidden><span class="empty-icon" aria-hidden="true">▤</span><h3>还没有课件</h3><p class="help">从添加第一套课件开始。</p></div></div>
+        </section>
+        <footer class="admin-footnote"><span>◇ 课件与标题均加密保存</span><span>每次修改都会保存到仓库</span></footer>
       </div>
-      <div class="row">
-        <a class="button ghost" href="../">返回站点</a>
-        <button id="disconnect-button" class="button ghost" type="button" hidden>断开连接</button>
-      </div>
-    </header>
-
-    <div id="status" class="status" role="status" hidden></div>
-
-    <section id="token-card" class="card admin-card" hidden>
-      <h2>连接仓库</h2>
-      <p class="help">
-        管理台需要一次性获得对 <code>wanli1145/pptshower</code> 仓库的写入权限。
-        令牌只保存在本浏览器的 localStorage 中，不会上传到其他地方。
-      </p>
-      <form id="token-form" class="row" autocomplete="off">
-        <input id="token-input" type="password" placeholder="github_pat_…" autocomplete="off" required>
-        <button id="token-button" class="button primary" type="submit">保存并连接</button>
-      </form>
-      <details class="help">
-        <summary>如何创建令牌</summary>
-        <ol>
-          <li>打开 GitHub 的 <strong>Settings → Developer settings → Personal access tokens → Fine-grained tokens</strong>。</li>
-          <li>把 <strong>Repository access</strong> 设为仅 <code>wanli1145/pptshower</code>。</li>
-          <li>在 <strong>Repository permissions</strong> 中把 <strong>Contents</strong> 设为 <strong>Read and write</strong>，<strong>Metadata</strong> 保持只读。</li>
-          <li>生成后把令牌粘贴到上面的输入框。令牌只会被本页面用于读写这个仓库。</li>
-        </ol>
-      </details>
-    </section>
-
-    <section id="auth-card" class="card admin-card" hidden>
-      <h2>输入总口令</h2>
-      <p class="help">总口令只在当前页面内存中用于加密和解密课件索引，刷新页面后需要重新输入。</p>
-      <form id="auth-form" class="row" autocomplete="off">
-        <input id="admin-passphrase" type="password" placeholder="总口令" autocomplete="current-password" required>
-        <button id="auth-button" class="button primary" type="submit">解锁管理</button>
-      </form>
-    </section>
-
-    <section id="init-card" class="card admin-card" hidden>
-      <h2>初始化站点</h2>
-      <p class="help">
-        仓库已连接，但站点还没有总口令。请设置一个至少 12 个字符的总口令。
-        <strong>口令不会保存在任何地方，忘记后将无法解密任何课件。</strong>
-      </p>
-      <form id="init-form" class="add-form" autocomplete="off">
-        <label class="field">
-          <span>总口令（至少 12 个字符）</span>
-          <input id="init-passphrase" type="password" autocomplete="new-password" required>
-        </label>
-        <label class="field">
-          <span>再次输入总口令</span>
-          <input id="init-confirm" type="password" autocomplete="new-password" required>
-        </label>
-        <p id="init-error" class="error" role="alert" hidden></p>
-        <div class="row">
-          <button id="init-button" class="button primary" type="submit">初始化站点</button>
-        </div>
-      </form>
-    </section>
-
-    <section id="manage-card" class="card admin-card" hidden>
-      <h2>课件管理</h2>
-
-      <form id="add-form" class="add-form" autocomplete="off">
-        <h3>添加课件</h3>
-        <label class="field">
-          <span>标题</span>
-          <input id="add-title" type="text" maxlength="200" required>
-        </label>
-        <label class="field">
-          <span>日期</span>
-          <input id="add-date" type="date">
-        </label>
-        <label class="field">
-          <span>PDF 文件</span>
-          <input id="add-file" type="file" accept="application/pdf,.pdf" required>
-        </label>
-        <div class="row">
-          <button id="add-button" class="button primary" type="submit">加密并上传</button>
-        </div>
-        <p class="help small">建议先在 PowerPoint 中把每个动画步骤拆成独立幻灯片，再导出为 PDF。单个文件不超过 50 MB。</p>
-      </form>
-
-      <div id="admin-deck-list" class="deck-table"></div>
-      <p id="admin-empty" class="muted" hidden>还没有课件。</p>
-    </section>
-
-    <p class="help small admin-footnote">
-      每次操作都会生成一次提交。提交信息只包含课件 ID，不包含标题或内容。
-    </p>
-  </main>
-
-  <dialog id="edit-dialog">
-    <form id="edit-form">
-      <h2>编辑课件</h2>
-      <label>
-        标题
-        <input id="edit-title" type="text" maxlength="200" required>
-      </label>
-      <label>
-        日期
-        <input id="edit-date" type="date">
-      </label>
-      <div class="row">
-        <button id="edit-cancel" class="button ghost" type="button">取消</button>
-        <button id="edit-save" class="button primary" type="submit">保存</button>
-      </div>
-    </form>
-  </dialog>
-
-  <input id="replace-file" type="file" accept="application/pdf,.pdf" hidden>
-
+    </main>
+  </div>
+  <dialog id="edit-dialog" aria-labelledby="edit-heading"><form id="edit-form"><p class="eyebrow">DECK DETAILS</p><h2 id="edit-heading">编辑课件</h2><p id="edit-error" class="error" role="alert" hidden></p><label class="field">标题<input id="edit-title" type="text" maxlength="200" required></label><label class="field">日期<input id="edit-date" type="date"></label><div class="row"><button id="edit-cancel" class="button ghost" type="button">取消</button><button id="edit-save" class="button primary" type="submit">保存修改</button></div></form></dialog>
+  <input id="replace-file" type="file" aria-label="替换课件 PDF" accept="application/pdf,.pdf" hidden>
+  <noscript><p class="setup-note">请启用 JavaScript，以管理课件。</p></noscript>
   <script type="module" src="admin.js"></script>
 </body>
 </html>

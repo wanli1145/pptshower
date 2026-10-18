@@ -1,4 +1,3 @@
-import * as pdfjsLib from './vendor/pdfjs/pdf.min.mjs';
 import {
   KDF_DEFAULT_ITERATIONS,
   decryptBytes,
@@ -6,10 +5,21 @@ import {
   deriveKey,
 } from './crypto.js';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  './vendor/pdfjs/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
+let pdfLibraryPromise;
+function loadPdfLibrary() {
+  if (!pdfLibraryPromise) {
+    pdfLibraryPromise = import('./vendor/pdfjs/pdf.min.mjs').then((library) => {
+      library.GlobalWorkerOptions.workerSrc = new URL(
+        './vendor/pdfjs/pdf.worker.min.mjs', import.meta.url
+      ).toString();
+      return library;
+    }).catch((error) => {
+      pdfLibraryPromise = null;
+      throw error;
+    });
+  }
+  return pdfLibraryPromise;
+}
 
 const PDF_OPTIONS = {
   cMapUrl: new URL('./vendor/pdfjs/cmaps/', import.meta.url).toString(),
@@ -29,6 +39,14 @@ const el = {
   passphrase: $('passphrase'),
   uninitializedNote: $('uninitialized-note'),
   listView: $('list-view'),
+  search: $('deck-search'),
+  sort: $('deck-sort'),
+  noResults: $('no-results'),
+  clearSearch: $('clear-search'),
+  navCount: $('nav-count'),
+  gridView: $('grid-view'),
+  rowsView: $('rows-view'),
+  togglePassphrase: $('toggle-passphrase'),
   listSubtitle: $('list-subtitle'),
   deckList: $('deck-list'),
   emptyList: $('empty-list'),
@@ -89,9 +107,11 @@ async function fetchFresh(path) {
 }
 
 function showOnly(view) {
+  const changed = view.hidden;
   el.unlockView.hidden = view !== el.unlockView;
   el.listView.hidden = view !== el.listView;
   el.viewerView.hidden = view !== el.viewerView;
+  if (changed) window.scrollTo(0, 0);
 }
 
 function clearUnlockError() {
@@ -107,23 +127,23 @@ function showUnlockError(message) {
 function setUnlockBusy(busy) {
   el.unlockButton.disabled = busy;
   el.passphrase.disabled = busy;
-  el.unlockButton.textContent = busy ? '解锁中…' : '解锁';
+  el.unlockButton.textContent = busy ? '正在解锁…' : '解锁课件库';
 }
 
 function showUnlock() {
   showOnly(el.unlockView);
-  el.unlockMessage.textContent = '输入总口令以查看课件。';
+  el.unlockMessage.textContent = '输入总口令，开启今天的课堂。';
   el.uninitializedNote.hidden = true;
   el.passphrase.disabled = false;
   el.unlockButton.disabled = false;
-  el.unlockButton.textContent = '解锁';
+  el.unlockButton.textContent = '解锁课件库';
   clearUnlockError();
   document.title = 'pptshower';
 }
 
 function showUninitialized() {
   showUnlock();
-  el.unlockMessage.textContent = '站点尚未初始化。';
+  el.unlockMessage.textContent = '欢迎使用！先设置总口令，再添加你的第一套课件。';
   el.passphrase.disabled = true;
   el.unlockButton.disabled = true;
   el.uninitializedNote.hidden = false;
@@ -137,30 +157,57 @@ function showList() {
 }
 
 function renderDeckList() {
-  el.deckList.replaceChildren();
-  const decks = state.decks.slice().sort((a, b) => {
+  const query = el.search.value.trim().toLocaleLowerCase();
+  const sort = el.sort.value;
+  const decks = state.decks.filter((deck) => deck.title.toLocaleLowerCase().includes(query));
+  decks.sort((a, b) => {
+    if (sort === 'title') return a.title.localeCompare(b.title, 'zh-CN') || a.id.localeCompare(b.id);
     const byDate = (b.date || '').localeCompare(a.date || '');
-    return byDate !== 0 ? byDate : a.id.localeCompare(b.id);
+    return (sort === 'oldest' ? -byDate : byDate) || a.id.localeCompare(b.id);
   });
-
-  for (const deck of decks) {
+  const fragment = document.createDocumentFragment();
+  for (const [index, deck] of decks.entries()) {
     const link = document.createElement('a');
     link.className = 'deck';
     link.href = `#/deck/${deck.id}/1`;
-
-    const title = document.createElement('h3');
-    title.textContent = deck.title;
-
+    link.setAttribute('aria-label', `展示课件：${deck.title || '未命名课件'}`);
+    const cover = document.createElement('div');
+    cover.className = 'deck-cover';
+    cover.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    label.className = 'cover-label';
+    label.textContent = `CLASSROOM / ${String(index + 1).padStart(2, '0')}`;
+    const coverTitle = document.createElement('span');
+    coverTitle.className = 'cover-title';
+    coverTitle.textContent = deck.title || '未命名课件';
+    const rule = document.createElement('span');
+    rule.className = 'cover-rule';
+    cover.append(label, coverTitle, rule);
+    const info = document.createElement('div');
+    info.className = 'deck-info';
+    const title = document.createElement('h2');
+    title.textContent = deck.title || '未命名课件';
+    title.title = title.textContent;
+    const meta = document.createElement('div');
+    meta.className = 'deck-meta';
     const date = document.createElement('span');
     date.className = 'deck-date';
-    date.textContent = deck.date || '';
-
-    link.append(title, date);
-    el.deckList.appendChild(link);
+    date.textContent = deck.date || '未设置日期';
+    const action = document.createElement('span');
+    action.className = 'deck-action';
+    action.textContent = '开始展示 ↗';
+    meta.append(date, action);
+    info.append(title, meta);
+    link.append(cover, info);
+    fragment.appendChild(link);
   }
-
-  el.emptyList.hidden = decks.length > 0;
-  el.listSubtitle.textContent = decks.length > 0 ? `共 ${decks.length} 套课件` : '已解锁的课件';
+  el.deckList.replaceChildren(fragment);
+  el.emptyList.hidden = state.decks.length > 0;
+  el.noResults.hidden = state.decks.length === 0 || decks.length > 0;
+  el.navCount.textContent = String(state.decks.length);
+  el.listSubtitle.textContent = query
+    ? `找到 ${decks.length} 套课件，共 ${state.decks.length} 套`
+    : `共 ${state.decks.length} 套课件，准备好开始下一次分享。`;
 }
 
 function parseIndex(index) {
@@ -244,6 +291,13 @@ async function unlock(event) {
 function lock() {
   state.key = null;
   state.decks = [];
+  el.search.value = '';
+  el.deckList.replaceChildren();
+  el.navCount.textContent = '0';
+  el.passphrase.type = 'password';
+  el.togglePassphrase.textContent = '显示';
+  el.togglePassphrase.setAttribute('aria-label', '显示总口令');
+  el.togglePassphrase.setAttribute('aria-pressed', 'false');
   teardownViewer();
   history.replaceState(null, '', location.pathname + location.search);
   showUnlock();
@@ -253,6 +307,7 @@ function lock() {
 
 function route() {
   if (!state.key) {
+    if (!state.initialized) { showUninitialized(); return; }
     showUnlock();
     return;
   }
@@ -309,6 +364,8 @@ async function loadDeck(deck, startPage) {
     if (token !== state.deckToken) return;
 
     setLoading(true, '正在打开课件…');
+    const pdfjsLib = await loadPdfLibrary();
+    if (token !== state.deckToken) return;
     const task = pdfjsLib.getDocument({ data: bytes, ...PDF_OPTIONS });
     state.loadingTask = task;
     const pdf = await task.promise;
@@ -355,6 +412,8 @@ function teardownPdf() {
   state.thumbGeneration += 1;
   state.thumbPending = [];
   el.overlay.replaceChildren();
+  el.canvas.width = 0;
+  el.canvas.height = 0;
 }
 
 function teardownViewer() {
@@ -459,7 +518,7 @@ async function renderPage(number) {
     });
     state.renderTask = renderTask;
     await renderTask.promise;
-    state.renderTask = null;
+    if (state.renderTask === renderTask) state.renderTask = null;
     if (token !== state.renderToken) return;
 
     await renderAnnotations(page, viewport, token);
@@ -566,6 +625,7 @@ async function followDestination(dest) {
 function openOverview() {
   if (!state.pdf || state.overviewOpen) return;
   state.overviewOpen = true;
+  el.stage.inert = true;
   el.overview.hidden = false;
   el.viewer.classList.add('overview-open');
   el.viewer.classList.remove('controls-hidden');
@@ -597,6 +657,7 @@ function openOverview() {
     button.type = 'button';
     button.className = number === state.page ? 'thumb current' : 'thumb';
     button.dataset.page = String(number);
+    button.setAttribute('aria-label', `第 ${number} 页`);
 
     const canvas = document.createElement('canvas');
     canvas.dataset.page = String(number);
@@ -618,7 +679,7 @@ function openOverview() {
 
   requestAnimationFrame(() => {
     const current = el.thumbGrid.querySelector('.thumb.current');
-    if (current) current.scrollIntoView({ block: 'center' });
+    if (current) { current.scrollIntoView({ block: 'center' }); current.focus(); }
   });
 }
 
@@ -629,8 +690,9 @@ async function pumpThumbs(generation) {
     renderThumb(item, generation)
       .catch(() => {})
       .finally(() => {
+        if (generation !== state.thumbGeneration) return;
         state.thumbActive -= 1;
-        if (generation === state.thumbGeneration) pumpThumbs(generation);
+        pumpThumbs(generation);
       });
   }
 }
@@ -663,6 +725,7 @@ function updateCurrentThumb() {
 function closeOverview() {
   if (!state.overviewOpen && el.overview.hidden) return;
   state.overviewOpen = false;
+  el.stage.inert = false;
   state.thumbGeneration += 1;
   state.thumbPending = [];
   state.thumbActive = 0;
@@ -673,6 +736,7 @@ function closeOverview() {
   state.thumbItems = [];
   el.overview.hidden = true;
   el.viewer.classList.remove('overview-open');
+  if (!el.viewerView.hidden) el.overviewButton.focus();
   el.thumbGrid.replaceChildren();
   armIdle();
 }
@@ -707,6 +771,14 @@ function onKeyDown(event) {
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
   if (state.overviewOpen) {
+    if (event.key === 'Tab') {
+      const items = [el.overviewClose, ...el.thumbGrid.querySelectorAll('button')];
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      return;
+    }
     if (event.key === 'Escape' || event.key === 'g' || event.key === 'G') {
       event.preventDefault();
       closeOverview();
@@ -759,6 +831,23 @@ function onKeyDown(event) {
 let touchStart = null;
 
 function bindEvents() {
+  el.search.addEventListener('input', renderDeckList);
+  el.sort.addEventListener('change', renderDeckList);
+  el.clearSearch.addEventListener('click', () => { el.search.value = ''; renderDeckList(); el.search.focus(); });
+  for (const [button, rows] of [[el.gridView, false], [el.rowsView, true]]) {
+    button.addEventListener('click', () => {
+      el.deckList.classList.toggle('rows', rows);
+      el.gridView.setAttribute('aria-pressed', String(!rows));
+      el.rowsView.setAttribute('aria-pressed', String(rows));
+    });
+  }
+  el.togglePassphrase.addEventListener('click', () => {
+    const show = el.passphrase.type === 'password';
+    el.passphrase.type = show ? 'text' : 'password';
+    el.togglePassphrase.textContent = show ? '隐藏' : '显示';
+    el.togglePassphrase.setAttribute('aria-label', show ? '隐藏总口令' : '显示总口令');
+    el.togglePassphrase.setAttribute('aria-pressed', String(show));
+  });
   el.unlockForm.addEventListener('submit', unlock);
   el.lockButton.addEventListener('click', lock);
   el.backButton.addEventListener('click', () => {
@@ -840,6 +929,7 @@ function bindEvents() {
   el.viewer.addEventListener('pointermove', armIdle);
   el.viewer.addEventListener('touchstart', armIdle, { passive: true });
   document.addEventListener('keydown', onKeyDown);
+  el.viewer.addEventListener('focusin', armIdle);
   document.addEventListener('fullscreenchange', () => {
     el.fullscreenButton.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
     setTimeout(() => {

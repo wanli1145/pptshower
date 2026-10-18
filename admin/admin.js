@@ -1,3 +1,4 @@
+import { commitChanges } from '../assets/repository.js';
 import {
   KDF_DEFAULT_ITERATIONS,
   MIN_PASSPHRASE_LENGTH,
@@ -36,6 +37,12 @@ const decoder = new TextDecoder();
 const $ = (id) => document.getElementById(id);
 const el = {
   status: $('status'),
+  stepConnect: $('step-connect'),
+  stepUnlock: $('step-unlock'),
+  stepManage: $('step-manage'),
+  fileName: $('file-name'),
+  uploadZone: $('upload-zone'),
+  adminCount: $('admin-count'),
   tokenCard: $('token-card'),
   tokenForm: $('token-form'),
   tokenInput: $('token-input'),
@@ -61,6 +68,7 @@ const el = {
   adminEmpty: $('admin-empty'),
   editDialog: $('edit-dialog'),
   editForm: $('edit-form'),
+  editError: $('edit-error'),
   editTitle: $('edit-title'),
   editDate: $('edit-date'),
   editCancel: $('edit-cancel'),
@@ -70,6 +78,7 @@ const el = {
 
 const state = {
   token: '',
+  baseSha: null,
   connected: false,
   key: null,
   salt: null,
@@ -105,6 +114,17 @@ function setStatus(message, kind) {
   el.status.hidden = !message;
   el.status.textContent = message || '';
   el.status.className = `status${kind ? ` ${kind}` : ''}`;
+  if (el.editDialog.open) {
+    el.editError.hidden = kind !== 'bad';
+    el.editError.textContent = kind === 'bad' ? message : '';
+  }
+  const step = state.key ? 2 : state.connected ? 1 : 0;
+  [el.stepConnect, el.stepUnlock, el.stepManage].forEach((item, index) => {
+    item.classList.toggle('current', index === step);
+    item.classList.toggle('complete', index < step);
+    if (index === step) item.setAttribute('aria-current', 'step');
+    else item.removeAttribute('aria-current');
+  });
 }
 
 function setBusy(busy) {
@@ -115,6 +135,16 @@ function setBusy(busy) {
   el.initButton.disabled = busy;
   el.editSave.disabled = busy;
   el.disconnectButton.disabled = busy;
+  el.addButton.disabled = busy;
+  el.manageCard.inert = busy;
+  el.manageCard.setAttribute('aria-busy', String(busy));
+  el.tokenInput.disabled = busy;
+  el.adminPassphrase.disabled = busy;
+  el.initPassphrase.disabled = busy;
+  el.initConfirm.disabled = busy;
+  el.editCancel.disabled = busy;
+  el.editTitle.disabled = busy;
+  el.editDate.disabled = busy;
 }
 
 function friendly(error) {
@@ -153,7 +183,7 @@ async function github(path, options = {}) {
   const headers = new Headers();
   if (state.token) headers.set('Authorization', `Bearer ${state.token}`);
   headers.set('Accept', options.accept || 'application/vnd.github+json');
-  const init = { method: options.method || 'GET', headers };
+  const init = { method: options.method || 'GET', headers, cache: 'no-store' };
   if (options.body !== undefined) {
     headers.set('Content-Type', 'application/json');
     init.body = JSON.stringify(options.body);
@@ -169,7 +199,7 @@ async function githubJson(path, options = {}) {
 
 async function readFileBytes(path) {
   const response = await github(
-    `/repos/${OWNER}/${REPO}/contents/${encodePath(path)}?ref=${BRANCH}&t=${Date.now()}`,
+    `/repos/${OWNER}/${REPO}/contents/${encodePath(path)}?ref=${state.baseSha || BRANCH}&t=${Date.now()}`,
     { accept: 'application/vnd.github.raw' }
   );
   if (response.status === 404) return null;
@@ -177,56 +207,12 @@ async function readFileBytes(path) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
-async function createBlob(bytes) {
-  const result = await githubJson(`/repos/${OWNER}/${REPO}/git/blobs`, {
-    method: 'POST',
-    body: { content: b64encode(bytes), encoding: 'base64' },
-  });
-  return result.sha;
-}
-
 async function commit(message, entries) {
-  const prepared = [];
-  for (const entry of entries) {
-    if (entry.delete) {
-      prepared.push({ path: entry.path, remove: true });
-    } else {
-      prepared.push({ path: entry.path, sha: await createBlob(entry.bytes) });
-    }
-  }
-
-  let lastError = null;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const ref = await githubJson(`/repos/${OWNER}/${REPO}/git/ref/heads/${BRANCH}`);
-      const parentSha = ref.object.sha;
-      const parent = await githubJson(`/repos/${OWNER}/${REPO}/git/commits/${parentSha}`);
-      const tree = await githubJson(`/repos/${OWNER}/${REPO}/git/trees`, {
-        method: 'POST',
-        body: {
-          base_tree: parent.tree.sha,
-          tree: prepared.map((item) =>
-            item.remove
-              ? { path: item.path, mode: '100644', type: 'blob', sha: null }
-              : { path: item.path, mode: '100644', type: 'blob', sha: item.sha }
-          ),
-        },
-      });
-      const created = await githubJson(`/repos/${OWNER}/${REPO}/git/commits`, {
-        method: 'POST',
-        body: { message, tree: tree.sha, parents: [parentSha] },
-      });
-      await githubJson(`/repos/${OWNER}/${REPO}/git/refs/heads/${BRANCH}`, {
-        method: 'PATCH',
-        body: { sha: created.sha },
-      });
-      return created;
-    } catch (error) {
-      lastError = error;
-      if (error.status !== 409 && error.status !== 422) throw error;
-    }
-  }
-  throw lastError;
+  const created = await commitChanges(githubJson, {
+    owner: OWNER, repo: REPO, branch: BRANCH, baseSha: state.baseSha, message, entries,
+  });
+  state.baseSha = created.sha;
+  return created;
 }
 
 async function connect() {
@@ -240,6 +226,8 @@ async function connect() {
       throw new Error('令牌没有本仓库的写入权限');
     }
 
+    const ref = await githubJson(`/repos/${OWNER}/${REPO}/git/ref/heads/${BRANCH}`);
+    state.baseSha = ref.object.sha;
     state.connected = true;
     el.tokenCard.hidden = true;
     el.disconnectButton.hidden = false;
@@ -278,6 +266,7 @@ async function connect() {
 function disconnect() {
   storeToken('');
   state.token = '';
+  state.baseSha = null;
   state.connected = false;
   state.key = null;
   state.salt = null;
@@ -487,6 +476,7 @@ async function addDeck(event) {
     ]);
     state.decks = index.decks;
     el.addForm.reset();
+    updateFileLabel();
     el.addDate.value = todayIso();
     renderDecks();
     setStatus(`已添加《${title}》。`, 'ok');
@@ -505,6 +495,7 @@ function requestReplace(id) {
 }
 
 async function replaceDeck(id, file) {
+  if (state.busy) return;
   const deck = state.decks.find((item) => item.id === id);
   if (!deck || !state.key) return;
   if (file.size > MAX_BYTES) {
@@ -549,6 +540,8 @@ function openEdit(id) {
   const deck = state.decks.find((item) => item.id === id);
   if (!deck) return;
   state.editId = id;
+  el.editError.hidden = true;
+  el.editError.textContent = '';
   el.editTitle.value = deck.title;
   el.editDate.value = deck.date;
   el.editDialog.showModal();
@@ -591,7 +584,7 @@ async function deleteDeck(id) {
   if (state.busy || !state.key) return;
   const deck = state.decks.find((item) => item.id === id);
   if (!deck) return;
-  if (!window.confirm(`确定删除《${deck.title}》？删除后无法恢复。`)) return;
+  if (!window.confirm(`确定从课件库中删除《${deck.title}》？`)) return;
 
   setBusy(true);
   setStatus('正在删除…');
@@ -625,6 +618,7 @@ function makeButton(label, onClick, extra = '') {
 
 function renderDecks() {
   el.adminDeckList.replaceChildren();
+  el.adminCount.textContent = `${state.decks.length} 套课件`;
   const decks = state.decks.slice().sort((a, b) => {
     const byDate = (b.date || '').localeCompare(a.date || '');
     return byDate !== 0 ? byDate : a.id.localeCompare(b.id);
@@ -658,7 +652,35 @@ function renderDecks() {
   el.adminEmpty.hidden = decks.length > 0;
 }
 
+function updateFileLabel() {
+  const file = el.addFile.files[0];
+  el.fileName.textContent = file ? `${file.name} · ${formatSize(file.size)}` : '选择 PDF，或拖放到这里';
+  el.uploadZone.classList.toggle('has-file', Boolean(file));
+}
+
 function bindEvents() {
+  el.addFile.addEventListener('change', updateFileLabel);
+  el.uploadZone.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    if (!state.busy) el.uploadZone.classList.add('drag-over');
+  });
+  el.uploadZone.addEventListener('dragleave', () => el.uploadZone.classList.remove('drag-over'));
+  el.uploadZone.addEventListener('drop', (event) => {
+    event.preventDefault();
+    el.uploadZone.classList.remove('drag-over');
+    if (state.busy) return;
+    const files = event.dataTransfer.files;
+    if (files.length !== 1) { setStatus('请每次选择一份 PDF 文件。', 'bad'); return; }
+    el.addFile.files = files;
+    updateFileLabel();
+  });
+  el.editDialog.addEventListener('cancel', (event) => {
+    if (state.busy) event.preventDefault();
+    else state.editId = null;
+  });
+  window.addEventListener('beforeunload', (event) => {
+    if (state.busy) { event.preventDefault(); event.returnValue = ''; }
+  });
   el.tokenForm.addEventListener('submit', (event) => {
     event.preventDefault();
     const token = el.tokenInput.value.trim();
