@@ -10,7 +10,7 @@ python3 -m http.server 8765 --bind 127.0.0.1
 
 打开 <http://127.0.0.1:8765/>。Web Crypto 需要 HTTPS 或 localhost，不建议直接双击 HTML 文件。
 
-首次使用时，进入 `/admin/`，连接 GitHub 仓库，设置至少 12 个字符的总口令，再上传第一套课件。生产管理台会实际写入 GitHub；仅查看界面可以直接打开，无需填写令牌。
+首次使用且站点尚未初始化时，首页显示「创建课件空间」，引导进入 `/admin/` 连接 GitHub 仓库、设置至少 12 个字符的总口令，再上传第一套课件。已经初始化的站点使用管理员统一设置的总口令，首页提供「第一次访问，还没有口令？」说明。生产管理台会实际写入 GitHub；仅查看界面可以直接打开，无需填写令牌。
 
 仓库目标目前在 `admin/admin.js` 中配置为 `wanli1145/pptshower`、`main` 分支。Fork 后需同时更新配置和管理台的仓库说明。GitHub Pages 需要自行启用；保存成功表示 Git 提交完成，公开站点可能需要等待部署完成。
 
@@ -46,6 +46,8 @@ node tests/preview-server.mjs
 隔离预览地址：<http://127.0.0.1:8788/>，总口令 `preview-only-2026`，管理台令牌 `preview-token`。
 
 预览服务使用内存中的模拟仓库、六套示例课件和三页示例 PDF。所有修改仅在进程内存中生效，重启后重置，不请求真实 GitHub，也不会生成生产课件文件。不要将该开发服务器用于公开部署。
+
+可以使用 `PPTSHOWER_PREVIEW_PORT=8789 node tests/preview-server.mjs --empty` 检查首次设置流程，或使用 `--config-error` 检查配置读取失败。测试服务不会将缺失的模拟课件回退到磁盘中的正式课件。
 
 `/tests/responsive.html` 提供 390px 宽的 iframe，方便检查响应式布局；它不等同于真实手机的触控、浏览器和全屏兼容性测试。
 

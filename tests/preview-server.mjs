@@ -5,6 +5,9 @@ import { resolve, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { deriveKey, encryptJson, encryptBytes, b64encode, randomBytes } from '../assets/crypto.js';
+const port = Number(process.env.PPTSHOWER_PREVIEW_PORT || 8788);
+const emptySite = process.argv.includes('--empty');
+const configError = process.argv.includes('--config-error');
 const root = fileURLToPath(new URL('..', import.meta.url));
 const salt = b64encode(randomBytes(16));
 const key = await deriveKey('preview-only-2026', salt, 1000);
@@ -38,6 +41,7 @@ let files = new Map([
   ['decks/index.enc', Buffer.from(await encryptJson(key, { version: 1, decks }))],
   ...decks.map((deck) => [`decks/${deck.id}/slides.pdf.enc`, encryptedPdf]),
 ]);
+if (emptySite) files.clear();
 let head = 'initial';
 const snapshots = new Map([[head, new Map(files)]]);
 const blobs = new Map(), trees = new Map(), commits = new Map([[head, { tree: { sha: head }, parents: [] }]]);
@@ -78,7 +82,10 @@ const server = http.createServer(async (req, res) => {
       return send(404, { message: 'Unknown fixture route' });
     }
     const relative = path.endsWith('/') ? `${path.slice(1)}index.html` : path.slice(1);
+    if (configError && relative === 'site.json') return send(503, { message: 'Simulated outage' });
     if (files.has(relative)) return send(200, files.get(relative), mime[extname(relative)] || 'application/octet-stream');
+    // Missing fixture data must never fall back to real course files on disk.
+    if (relative === 'site.json' || relative.startsWith('decks/')) return send(404, { message: 'Not found' });
     const full = resolve(root, relative);
     if (!full.startsWith(root) || relative.split('/').some((part) => part.startsWith('.'))) return send(403, { message: 'Forbidden' });
     let data = await readFile(full);
@@ -86,4 +93,4 @@ const server = http.createServer(async (req, res) => {
     return send(200, data, mime[extname(full)] || 'application/octet-stream');
   } catch (error) { return send(error.code === 'ENOENT' ? 404 : 500, { message: error.message }); }
 });
-server.listen(8788, '127.0.0.1', () => console.log('Local fixtures: http://127.0.0.1:8788 | passphrase: preview-only-2026 | token: preview-token'));
+server.listen(port, '127.0.0.1', () => console.log(`Local fixtures: http://127.0.0.1:${port} | passphrase: preview-only-2026 | token: preview-token`));

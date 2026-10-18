@@ -456,3 +456,14 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+
+/* Give first-time visitors a route forward before asking for a passphrase. */
+.first-use { margin-top: 26px; }
+.first-use-steps { margin: 0 0 24px; padding-left: 22px; color: var(--muted); font-size: 13px; display: grid; gap: 12px; }
+.first-use-steps li::marker { color: var(--accent); font-weight: 650; }
+.first-use > .help { margin-top: 14px; line-height: 1.8; }
+.passphrase-help { margin-top: 18px; font-size: 12px; color: var(--muted); }
+.passphrase-help summary { color: var(--accent); cursor: pointer; min-height: 44px; display: list-item; padding: 12px 0; }
+.passphrase-help p { line-height: 1.9; margin-top: 10px; }
+.passphrase-help a { text-decoration: underline; text-underline-offset: 3px; }
+#retry-site { margin-top: 24px; }

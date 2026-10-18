@@ -34,6 +34,10 @@ const el = {
   unlockView: $('unlock-view'),
   unlockForm: $('unlock-form'),
   unlockMessage: $('unlock-message'),
+  entryEyebrow: $('entry-eyebrow'),
+  entryHeading: $('entry-heading'),
+  passphraseHelp: $('passphrase-help'),
+  retrySite: $('retry-site'),
   unlockError: $('unlock-error'),
   unlockButton: $('unlock-button'),
   passphrase: $('passphrase'),
@@ -96,6 +100,7 @@ const state = {
   idleTimer: null,
   suppressClick: false,
   initialized: false,
+  siteStatus: 'loading',
 };
 
 function tick() {
@@ -132,21 +137,31 @@ function setUnlockBusy(busy) {
 
 function showUnlock() {
   showOnly(el.unlockView);
-  el.unlockMessage.textContent = '输入总口令，开启今天的课堂。';
-  el.uninitializedNote.hidden = true;
-  el.passphrase.disabled = false;
-  el.unlockButton.disabled = false;
+  const ready = state.siteStatus === 'ready';
+  const empty = state.siteStatus === 'empty';
+  const failed = state.siteStatus === 'error';
+  el.unlockForm.hidden = !ready;
+  el.uninitializedNote.hidden = !empty;
+  el.passphraseHelp.hidden = !ready;
+  el.retrySite.hidden = !failed;
+  el.entryEyebrow.textContent = empty ? '首次使用 · 欢迎' : '课件空间';
+  el.entryHeading.textContent = ready ? '解锁课件空间'
+    : empty ? '先创建你的课件空间'
+    : failed ? '暂时无法读取站点' : '正在读取课件空间';
+  el.unlockMessage.textContent = ready ? '本站已设置总口令。请输入管理员提供的口令。'
+    : empty ? '这个站点还没有设置口令。先创建空间，再上传和展示课件。'
+    : failed ? '目前无法确认站点状态，请重新读取后再继续。'
+    : '正在确认站点是否已设置总口令…';
+  el.passphrase.disabled = !ready;
+  el.unlockButton.disabled = !ready;
   el.unlockButton.textContent = '解锁课件库';
   clearUnlockError();
   document.title = 'pptshower';
 }
 
 function showUninitialized() {
+  state.siteStatus = 'empty';
   showUnlock();
-  el.unlockMessage.textContent = '欢迎使用！先设置总口令，再添加你的第一套课件。';
-  el.passphrase.disabled = true;
-  el.unlockButton.disabled = true;
-  el.uninitializedNote.hidden = false;
 }
 
 function showList() {
@@ -226,6 +241,7 @@ function parseIndex(index) {
 
 async function boot() {
   bindEvents();
+  showUnlock();
   try {
     const response = await fetchFresh('site.json');
     if (response.status === 404) {
@@ -241,9 +257,11 @@ async function boot() {
     state.salt = kdf.salt;
     state.iterations = Number(kdf.iterations) || KDF_DEFAULT_ITERATIONS;
     state.initialized = true;
+    state.siteStatus = 'ready';
     showUnlock();
     if (location.hash) route();
   } catch (error) {
+    state.siteStatus = 'error';
     showUnlock();
     showUnlockError(`站点配置读取失败：${error.message}`);
   }
@@ -307,7 +325,6 @@ function lock() {
 
 function route() {
   if (!state.key) {
-    if (!state.initialized) { showUninitialized(); return; }
     showUnlock();
     return;
   }
@@ -831,6 +848,7 @@ function onKeyDown(event) {
 let touchStart = null;
 
 function bindEvents() {
+  el.retrySite.addEventListener('click', () => location.reload());
   el.search.addEventListener('input', renderDeckList);
   el.sort.addEventListener('change', renderDeckList);
   el.clearSearch.addEventListener('click', () => { el.search.value = ''; renderDeckList(); el.search.focus(); });

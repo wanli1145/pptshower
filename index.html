@@ -29,16 +29,26 @@
         <a class="top-link" href="admin/">管理课件 <span aria-hidden="true">↗</span></a>
         <div class="unlock-content">
           <span class="section-symbol" aria-hidden="true">↗</span>
-          <p class="eyebrow">WELCOME BACK</p>
-          <h2>进入你的课件库</h2>
-          <p id="unlock-message" class="muted">输入总口令，开启今天的课堂。</p>
-          <form id="unlock-form" autocomplete="off">
+          <p id="entry-eyebrow" class="eyebrow">课件空间</p>
+          <h2 id="entry-heading">正在读取课件空间</h2>
+          <p id="unlock-message" class="muted" role="status">正在确认站点是否已设置总口令…</p>
+          <p id="unlock-error" class="error" role="alert" hidden></p>
+          <form id="unlock-form" autocomplete="off" hidden>
             <label class="field" for="passphrase">总口令</label>
             <div class="password-field"><input id="passphrase" name="passphrase" type="password" autocomplete="current-password" placeholder="输入总口令…" aria-describedby="unlock-error" required><button id="toggle-passphrase" class="password-toggle" type="button" aria-label="显示总口令" aria-pressed="false">显示</button></div>
-            <p id="unlock-error" class="error" role="alert" hidden></p>
             <button type="submit" class="button primary block" id="unlock-button">解锁课件库</button>
           </form>
-          <p id="uninitialized-note" class="setup-note" hidden>第一次使用？前往 <a href="admin/">管理台初始化站点 →</a></p>
+          <div id="uninitialized-note" class="first-use" hidden>
+            <ol class="first-use-steps"><li>连接你的 GitHub 课件仓库</li><li>设置总口令，并妥善保存</li><li>上传第一套课件，开始展示</li></ol>
+            <a class="button primary block" href="admin/">创建课件空间 →</a>
+            <p class="help small">总口令由你在下一步设置，无需提前拥有口令。</p>
+          </div>
+          <details id="passphrase-help" class="passphrase-help" hidden>
+            <summary>第一次访问，还没有口令？</summary>
+            <p>这个课件空间使用统一总口令，由管理员首次创建空间时设置。观看课件，请向分享网址的人索取口令。</p>
+            <p>如果你是管理员，<a href="admin/">前往管理台查看站点状态 →</a>。总口令与 GitHub 令牌不同；新设一个口令不能解密已有课件。</p>
+          </details>
+          <button id="retry-site" class="button ghost block" type="button" hidden>重新读取站点</button>
           <div class="privacy-note"><span aria-hidden="true">◇</span><p>课件仅在当前浏览器中解密。<br>刷新页面后，需要重新输入总口令。</p></div>
         </div>
         <div class="unlock-footer">你的课件，安心存放。</div>
