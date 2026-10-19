@@ -1,4 +1,4 @@
-import { commitChanges } from '../assets/repository.js';
+import { commitChanges, readRepositoryFile } from '../assets/repository.js';
 import {
   KDF_DEFAULT_ITERATIONS,
   MIN_PASSPHRASE_LENGTH,
@@ -162,10 +162,6 @@ function friendly(error) {
   return message;
 }
 
-function encodePath(path) {
-  return path.split('/').map(encodeURIComponent).join('/');
-}
-
 async function responseError(response) {
   let message = `${response.status} ${response.statusText}`;
   try {
@@ -198,13 +194,9 @@ async function githubJson(path, options = {}) {
 }
 
 async function readFileBytes(path) {
-  const response = await github(
-    `/repos/${OWNER}/${REPO}/contents/${encodePath(path)}?ref=${state.baseSha || BRANCH}&t=${Date.now()}`,
-    { accept: 'application/vnd.github.raw' }
-  );
-  if (response.status === 404) return null;
-  if (!response.ok) throw await responseError(response);
-  return new Uint8Array(await response.arrayBuffer());
+  return readRepositoryFile(githubJson, {
+    owner: OWNER, repo: REPO, ref: state.baseSha || BRANCH, path,
+  });
 }
 
 async function commit(message, entries) {
@@ -331,8 +323,11 @@ async function authenticate(event) {
     let index;
     try {
       index = await decryptJson(key, bytes);
-    } catch {
-      throw new Error('总口令不正确');
+    } catch (error) {
+      if (error.name === 'OperationError') {
+        throw new Error('无法解密课件索引：总口令不匹配，或加密数据已损坏。请使用创建课件空间时设置的总口令。');
+      }
+      throw new Error('课件索引内容格式异常，无法读取。');
     }
     state.key = key;
     state.decks = parseIndex(index);

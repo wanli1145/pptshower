@@ -3,7 +3,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { deriveKey, encryptJson, encryptBytes, b64encode, randomBytes } from '../assets/crypto.js';
 const port = Number(process.env.PPTSHOWER_PREVIEW_PORT || 8788);
 const emptySite = process.argv.includes('--empty');
@@ -63,7 +63,17 @@ const server = http.createServer(async (req, res) => {
       if (api === repo) return send(200, { permissions: { push: true } });
       if (api.startsWith(`${repo}/contents/`)) {
         const data = (snapshots.get(url.searchParams.get('ref')) || files).get(api.slice(`${repo}/contents/`.length));
-        return data ? send(200, data, 'application/octet-stream') : send(404, { message: 'Not found' });
+        if (!data) return send(404, { message: 'Not found' });
+        const sha = createHash('sha1').update(`blob ${data.length}\0`).update(data).digest('hex');
+        blobs.set(sha, data);
+        // Reproduce Contents mistaking ciphertext for UTF-16 text.
+        const converted = Buffer.from(data.toString('utf16le'), 'utf8');
+        if (req.headers.accept?.includes('github.raw')) return send(200, converted, 'application/octet-stream');
+        return send(200, { type: 'file', sha, size: data.length, encoding: 'base64', content: converted.toString('base64') });
+      }
+      if (req.method === 'GET' && api.startsWith(`${repo}/git/blobs/`)) {
+        const sha = api.split('/').at(-1), data = blobs.get(sha);
+        return data ? send(200, { sha, size: data.length, encoding: 'base64', content: data.toString('base64') }) : send(404, { message: 'Not found' });
       }
       if (api === `${repo}/git/ref/heads/main`) return send(200, { object: { sha: head } });
       if (api.startsWith(`${repo}/git/commits/`)) return send(200, commits.get(api.split('/').at(-1)));
